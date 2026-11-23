@@ -1,3 +1,23 @@
-node_modules
-.env
+# Dependencies
+node_modules/
+*/node_modules/
 package-lock.json
+
+# Environment files
+.env
+server/.env
+*.env.local
+
+# Build outputs
+client/dist/
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans antialiased bg-[#FAF9F6] text-slate-800 transition-colors duration-150;
+    background-image: radial-gradient(#F97316 0.5px, transparent 0.5px);
+    background-size: 32px 32px;
+    background-color: #FAF9F6;
+  }
+
+  /* Clean subtle scrollbars with warm orange hover */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-orange-200/80 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-orange-300;
+  }
+}
+
+/* Custom Standard UI Utility Classes */
+.card-rounded {
+  @apply rounded-2xl md:rounded-3xl border border-orange-100/90 bg-white shadow-soft transition-all duration-200;
+}
+
+.card-hover {
+  @apply hover:border-orange-200 hover:shadow-soft-lg transition-all duration-200;
+}
+
+.input-rounded {
+  @apply rounded-2xl md:rounded-3xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20;
+}
+
+.btn-primary {
+  @apply rounded-2xl md:rounded-3xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold px-5 py-2.5 text-sm transition-all shadow-md shadow-orange-500/25 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.btn-secondary {
+  @apply rounded-2xl md:rounded-3xl bg-orange-50/80 hover:bg-orange-100/80 text-orange-900 font-semibold px-5 py-2.5 text-sm border border-orange-200/80 transition-all active:scale-[0.98] disabled:opacity-50;
+}
+
+.btn-outline {
+  @apply rounded-2xl md:rounded-3xl border border-slate-200 hover:border-orange-300 hover:bg-orange-50/50 text-slate-700 font-medium px-4 py-2 text-sm transition-all active:scale-[0.98] disabled:opacity-50;
+}
+
+.btn-danger {
+  @apply rounded-2xl md:rounded-3xl bg-rose-600 hover:bg-rose-700 text-white font-medium px-5 py-2.5 text-sm transition-all shadow-sm active:scale-[0.98] disabled:opacity-50;
+}
+
+.badge-orange {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200;
+}
