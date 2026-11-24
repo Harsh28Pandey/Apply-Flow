@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
+    "build": "node -e \"console.log('Server ready')\"",
     "test": "vitest run"
   },
   "dependencies": {
@@ -19,7 +20,7 @@
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.5",
-    "multer": "^1.4.5-lts.1",
+    "multer": "^2.5.0",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.10.0",
     "pdf-parse": "^1.1.1",
