@@ -14,9 +14,6 @@ export async function connectDB() {
     return conn;
   } catch (error) {
     logger.error({ err: error }, 'MongoDB Connection Failed');
-    if (env.NODE_ENV !== 'test') {
-      process.exit(1);
-    }
     throw error;
   }
 }

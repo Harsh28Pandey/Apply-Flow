@@ -7,6 +7,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 import { env } from './config/env.js';
+import { connectDB } from './config/db.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { generalLimiter } from './middleware/rateLimiter.js';
 
@@ -34,24 +35,25 @@ export function createApp() {
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: 'cross-origin' },
-      contentSecurityPolicy: false, // Let React app handle resources smoothly
+      contentSecurityPolicy: false,
     })
   );
 
-  // Flexible and secure CORS configuration
+  // Flexible and secure CORS configuration reading from env.CLIENT_ORIGIN
   const configuredOrigins = (env.CLIENT_ORIGIN || '')
     .split(',')
-    .map((s) => s.trim())
+    .map((s) => s.trim().replace(/\/+$/, ''))
     .filter(Boolean);
 
   app.use(
     cors({
       origin: (origin, callback) => {
         if (!origin) return callback(null, true);
+        const normalized = origin.replace(/\/+$/, '');
         const isAllowed =
-          configuredOrigins.includes(origin) ||
-          origin.endsWith('.vercel.app') ||
-          /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+          configuredOrigins.includes(normalized) ||
+          normalized.endsWith('.vercel.app') ||
+          /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(normalized);
 
         if (isAllowed) {
           return callback(null, true);
@@ -69,8 +71,28 @@ export function createApp() {
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   app.use(cookieParser());
 
-  // Public unauthenticated tracking, unsubscribe, and health routes
+  // Public unauthenticated tracking, unsubscribe, and health routes (no DB requirement)
   app.use('/', publicRoutes);
+
+  // Lazy database connection middleware for API routes
+  app.use(async (req, res, next) => {
+    // Health and public routes already handled above
+    if (
+      req.path === '/' ||
+      req.path === '/api/health' ||
+      req.path === '/health'
+    ) {
+      return next();
+    }
+    try {
+      if (env.MONGODB_URI) {
+        await connectDB();
+      }
+      next();
+    } catch (err) {
+      next(err);
+    }
+  });
 
   // Versioned API v1 routes with rate limiting
   app.use('/api/', generalLimiter);
@@ -84,9 +106,9 @@ export function createApp() {
   app.use('/api/v1/analytics', analyticsRoutes);
   app.use('/api/v1/tracking', trackingRoutes);
 
-  // Serve built client SPA if client/dist exists or in production
+  // Serve built client SPA if client/dist exists (standalone fullstack deployment)
   const clientDistPath = path.resolve(__dirname, '../../client/dist');
-  if (fs.existsSync(path.join(clientDistPath, 'index.html')) || env.NODE_ENV === 'production') {
+  if (fs.existsSync(path.join(clientDistPath, 'index.html'))) {
     app.use(express.static(clientDistPath));
     app.get('*', (req, res, next) => {
       if (
