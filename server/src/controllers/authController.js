@@ -51,8 +51,18 @@ function setRefreshTokenCookie(res, token, req) {
   res.cookie('refreshToken', token, {
     httpOnly: true,
     secure: isHttps,
-    sameSite: 'lax',
+    sameSite: isHttps ? 'none' : 'lax',
     maxAge: 30 * 24 * 60 * 60 * 1000,
+    path: '/',
+  });
+}
+
+function clearRefreshTokenCookie(res, req) {
+  const isHttps = req ? (req.secure || req.headers['x-forwarded-proto'] === 'https') : false;
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: isHttps,
+    sameSite: isHttps ? 'none' : 'lax',
     path: '/',
   });
 }
@@ -182,7 +192,7 @@ export async function refresh(req, res, next) {
     const existingToken = await RefreshToken.findOne({ tokenHash });
 
     if (!existingToken || existingToken.expiresAt < new Date()) {
-      res.clearCookie('refreshToken', { path: '/' });
+      clearRefreshTokenCookie(res, req);
       return res.status(401).json({
         error: {
           code: 'INVALID_REFRESH_TOKEN',
@@ -213,7 +223,7 @@ export async function refresh(req, res, next) {
         }
       }
 
-      res.clearCookie('refreshToken', { path: '/' });
+      clearRefreshTokenCookie(res, req);
       return res.status(401).json({
         error: {
           code: 'INVALID_REFRESH_TOKEN',
@@ -266,7 +276,7 @@ export async function logout(req, res, next) {
       await RefreshToken.updateOne({ tokenHash }, { revokedAt: new Date() });
     }
 
-    res.clearCookie('refreshToken', { path: '/' });
+    clearRefreshTokenCookie(res, req);
     res.json({ message: 'Logged out successfully.' });
   } catch (err) {
     next(err);
@@ -426,7 +436,7 @@ export async function deleteAccount(req, res, next) {
       AuditLog.deleteMany({ userId }),
     ]);
 
-    res.clearCookie('refreshToken', { path: '/api/v1/auth' });
+    clearRefreshTokenCookie(res, req);
     res.json({ message: 'Account and all associated data have been permanently deleted.' });
   } catch (err) {
     next(err);

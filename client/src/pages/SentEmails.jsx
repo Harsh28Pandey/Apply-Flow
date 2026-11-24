@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../api/client';
+import api, { getAccessToken, API_BASE_URL } from '../api/client';
 import toast from 'react-hot-toast';
 import {
   Send,
@@ -35,12 +35,12 @@ export default function SentEmails() {
 
   // Dynamic live SSE tracking listener
   useEffect(() => {
-    const token = localStorage.getItem('applyflow_access');
+    const token = getAccessToken() || localStorage.getItem('applyflow_token');
     if (!token) return;
 
     let eventSource = null;
     try {
-      eventSource = new EventSource(`/api/v1/tracking/stream?token=${encodeURIComponent(token)}`);
+      eventSource = new EventSource(`${API_BASE_URL}/api/v1/tracking/stream?token=${encodeURIComponent(token)}`);
       
       eventSource.onmessage = (e) => {
         try {

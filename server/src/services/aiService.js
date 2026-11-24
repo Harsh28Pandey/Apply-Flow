@@ -69,34 +69,52 @@ STRICT RULES:
 /**
  * Makes request to Groq API with timeout, retry for 503, and friendly error mapping.
  */
-async function callGroqAPI({ apiKey, model, messages, temperature = 0.65, maxTokens = 3000 }) {
+async function callGroqAPI({ apiKey, model, messages, temperature = 0.65, maxTokens = 8000 }) {
   const url = 'https://api.groq.com/openai/v1/chat/completions';
   const headers = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${apiKey}`,
   };
 
-  const body = JSON.stringify({
-    model: model || 'openai/gpt-oss-20b',
-    messages,
-    temperature,
-    max_tokens: maxTokens,
-    response_format: { type: 'json_object' },
-  });
+  const selectedModel = model || 'openai/gpt-oss-20b';
+  const isReasoningModel =
+    selectedModel.includes('gpt-oss') ||
+    selectedModel.includes('r1') ||
+    selectedModel.includes('o1') ||
+    selectedModel.includes('o3');
 
   let attempts = 0;
   const max503Retries = 2;
+  let useJsonFormat = true;
+  let reasoningFormat = isReasoningModel ? 'parsed' : undefined;
+  let reasoningEffort = isReasoningModel ? 'low' : undefined;
 
   while (attempts <= max503Retries) {
     attempts++;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
 
+    const payload = {
+      model: selectedModel,
+      messages,
+      temperature,
+      max_completion_tokens: maxTokens,
+    };
+
+    if (useJsonFormat) {
+      payload.response_format = { type: 'json_object' };
+    }
+
+    if (isReasoningModel) {
+      if (reasoningFormat) payload.reasoning_format = reasoningFormat;
+      if (reasoningEffort) payload.reasoning_effort = reasoningEffort;
+    }
+
     try {
       const response = await fetch(url, {
         method: 'POST',
         headers,
-        body,
+        body: JSON.stringify(payload),
         signal: controller.signal,
       });
 
@@ -127,6 +145,22 @@ async function callGroqAPI({ apiKey, model, messages, temperature = 0.65, maxTok
         const errorText = await response.text();
         const redactedMsg = redactSecrets(errorText);
 
+        // Check if error is due to JSON validation or token cutoff with reasoning
+        if (
+          response.status === 400 &&
+          (errorText.includes('json_validate_failed') ||
+            errorText.includes('max completion tokens') ||
+            errorText.includes('failed_generation'))
+        ) {
+          if (useJsonFormat) {
+            logger.warn('Groq JSON validation limit hit. Retrying without json_object constraint and hidden reasoning...');
+            useJsonFormat = false;
+            reasoningFormat = 'hidden';
+            reasoningEffort = 'low';
+            continue;
+          }
+        }
+
         if (response.status === 401) {
           const err = new Error('Groq authentication failed. Please verify your Groq API key in Settings.');
           err.statusCode = 401;
@@ -140,7 +174,7 @@ async function callGroqAPI({ apiKey, model, messages, temperature = 0.65, maxTok
           throw err;
         }
         if (response.status === 404) {
-          const err = new Error(`Selected AI model '${model}' was not found. Please choose another model in Settings.`);
+          const err = new Error(`Selected AI model '${selectedModel}' was not found. Please choose another model in Settings.`);
           err.statusCode = 404;
           err.errorCode = 'AI_MODEL_NOT_FOUND';
           throw err;
@@ -182,9 +216,10 @@ async function callGroqAPI({ apiKey, model, messages, temperature = 0.65, maxTok
 /**
  * Parses and validates the AI response text as JSON { subject, body }
  */
-function parseAndValidateAiJson(content) {
+export function parseAndValidateAiJson(content) {
+  if (!content || typeof content !== 'string') return null;
   try {
-    let cleaned = content.trim();
+    let cleaned = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
     // Strip markdown code fences if model enclosed it
     if (cleaned.startsWith('```json')) {
       cleaned = cleaned.replace(/^```json\s*/, '').replace(/\s*```$/, '');
@@ -192,12 +227,26 @@ function parseAndValidateAiJson(content) {
       cleaned = cleaned.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
 
-    const parsed = JSON.parse(cleaned);
-    const validated = aiResponseSchema.parse(parsed);
-    return {
-      subject: validated.subject.trim().replace(/[\r\n]+/g, ' '),
-      body: validated.body.trim(),
-    };
+    try {
+      const parsed = JSON.parse(cleaned);
+      const validated = aiResponseSchema.parse(parsed);
+      return {
+        subject: validated.subject.trim().replace(/[\r\n]+/g, ' '),
+        body: validated.body.trim(),
+      };
+    } catch {
+      // Substring fallback if model outputted reasoning or text before/after JSON
+      const jsonMatch = cleaned.match(/\{[\s\S]*"subject"[\s\S]*"body"[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        const validated = aiResponseSchema.parse(parsed);
+        return {
+          subject: validated.subject.trim().replace(/[\r\n]+/g, ' '),
+          body: validated.body.trim(),
+        };
+      }
+      return null;
+    }
   } catch (err) {
     return null;
   }
@@ -427,6 +476,6 @@ export async function testGroqConnection(apiKey, model = 'openai/gpt-oss-20b') {
     apiKey,
     model,
     messages,
-    maxTokens: 50,
+    maxTokens: 1000,
   });
 }

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { getAccessToken } from '../api/client';
+import { getAccessToken, API_BASE_URL } from '../api/client';
 
 const NotificationContext = createContext();
 
@@ -16,7 +16,7 @@ export function NotificationProvider({ children }) {
     let eventSource;
     try {
       // Connect to SSE tracking stream
-      eventSource = new EventSource(`/api/v1/tracking/stream?token=${getAccessToken() || ''}`);
+      eventSource = new EventSource(`${API_BASE_URL}/api/v1/tracking/stream?token=${encodeURIComponent(getAccessToken() || '')}`);
 
       eventSource.onmessage = (event) => {
         try {

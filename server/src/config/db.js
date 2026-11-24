@@ -3,6 +3,9 @@ import { env } from './env.js';
 import { logger } from '../utils/logger.js';
 
 export async function connectDB() {
+  if (mongoose.connection.readyState >= 1) {
+    return mongoose.connection;
+  }
   try {
     const conn = await mongoose.connect(env.MONGODB_URI, {
       autoIndex: true,

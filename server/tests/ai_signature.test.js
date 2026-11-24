@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { extractSignature, preserveUserSignature } from '../src/utils/signatureUtils.js';
 import { markdownToSafeHtml, markdownToPlainText } from '../src/utils/markdownToHtml.js';
+import { parseAndValidateAiJson } from '../src/services/aiService.js';
 
 describe('AI Signature Preservation & Safe Markdown Rendering (Section 9)', () => {
   it('should extract and preserve user signature block from "Best regards," onward', () => {
@@ -46,5 +47,25 @@ AI Generated Signature Name`;
     const plainText = markdownToPlainText(markdown);
 
     expect(plainText).toBe('Check out my recent project at My Work (https://work.com/portfolio).');
+  });
+
+  it('should correctly parse AI responses containing reasoning tokens, think tags, or markdown code blocks', () => {
+    // 1. Markdown code block format
+    const codeBlockInput = '```json\n{"subject": "Application - Alex", "body": "Hello world"}\n```';
+    const parsedCodeBlock = parseAndValidateAiJson(codeBlockInput);
+    expect(parsedCodeBlock).toEqual({ subject: 'Application - Alex', body: 'Hello world' });
+
+    // 2. Output with <think> reasoning tags from reasoning models
+    const thinkTagInput = '<think>Let me formulate the subject and body.\nThe user wants an application email.</think>\n{"subject": "Application - Alex Mercer", "body": "Dear Hiring Manager,\\n\\nI am excited to apply."}';
+    const parsedThinkTag = parseAndValidateAiJson(thinkTagInput);
+    expect(parsedThinkTag).toEqual({
+      subject: 'Application - Alex Mercer',
+      body: 'Dear Hiring Manager,\n\nI am excited to apply.',
+    });
+
+    // 3. Output with leading conversational text
+    const conversationalInput = 'Here is the generated email you requested:\n{"subject": "Role Inquiry", "body": "Hi there"}\nHope this helps!';
+    const parsedConversational = parseAndValidateAiJson(conversationalInput);
+    expect(parsedConversational).toEqual({ subject: 'Role Inquiry', body: 'Hi there' });
   });
 });

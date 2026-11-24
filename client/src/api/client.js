@@ -23,8 +23,12 @@ export function getAccessToken() {
   return accessTokenMemory;
 }
 
+export const API_BASE_URL = import.meta.env.VITE_API_URL
+  ? import.meta.env.VITE_API_URL.replace(/\/$/, '')
+  : '';
+
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: `${API_BASE_URL}/api/v1`,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
@@ -96,7 +100,7 @@ api.interceptors.response.use(
         })();
 
         const { data } = await axios.post(
-          '/api/v1/auth/refresh',
+          `${API_BASE_URL}/api/v1/auth/refresh`,
           { refreshToken: storedRefresh },
           { withCredentials: true }
         );
