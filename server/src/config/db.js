@@ -10,10 +10,10 @@ export async function connectDB() {
     const conn = await mongoose.connect(env.MONGODB_URI, {
       autoIndex: true,
     });
-    logger.info(`✅ MongoDB Connected: ${conn.connection.host}/${conn.connection.name}`);
+    logger.info(`MongoDB Connected: ${conn.connection.host}/${conn.connection.name}`);
     return conn;
   } catch (error) {
-    logger.error({ err: error }, '❌ MongoDB Connection Failed');
+    logger.error({ err: error }, 'MongoDB Connection Failed');
     if (env.NODE_ENV !== 'test') {
       process.exit(1);
     }

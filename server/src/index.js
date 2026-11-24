@@ -17,9 +17,9 @@ async function bootstrap() {
 
     // 4. Start HTTP Server
     const server = app.listen(env.PORT, () => {
-      logger.info(`🚀 Apply Flow Server running on port ${env.PORT} [${env.NODE_ENV}]`);
-      logger.info(`🔗 Public Base URL: ${env.PUBLIC_BASE_URL}`);
-      logger.info(`📡 Client Origin: ${env.CLIENT_ORIGIN}`);
+      logger.info(`Apply Flow Server running on port ${env.PORT} [${env.NODE_ENV}]`);
+      logger.info(`Public Base URL: ${env.PUBLIC_BASE_URL}`);
+      logger.info(`Client Origin: ${env.CLIENT_ORIGIN}`);
     });
 
     // Graceful Shutdown

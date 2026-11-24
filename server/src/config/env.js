@@ -1,6 +1,20 @@
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
 import { z } from 'zod';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const serverEnvPath = path.resolve(__dirname, '../../.env');
+const rootEnvPath = path.resolve(__dirname, '../../../.env');
+
+// Load environment variables (checking both server/.env and root .env)
+if (fs.existsSync(serverEnvPath)) {
+  dotenv.config({ path: serverEnvPath });
+}
+if (fs.existsSync(rootEnvPath)) {
+  dotenv.config({ path: rootEnvPath, override: true });
+}
 dotenv.config();
 
 const envSchema = z.object({
@@ -17,7 +31,7 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error('❌ FATAL: Missing or invalid environment variables:');
+  console.error('FATAL: Missing or invalid environment variables:');
   parsed.error.issues.forEach(issue => {
     console.error(`   - ${issue.path.join('.')}: ${issue.message}`);
   });
@@ -30,10 +44,10 @@ if (!parsed.success) {
 export const env = parsed.success ? parsed.data : {
   PORT: 5000,
   NODE_ENV: 'test',
-  MONGODB_URI: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/careermail_pro_test',
-  JWT_SECRET: process.env.JWT_SECRET || 'test_jwt_secret_at_least_16_characters',
-  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'test_refresh_secret_at_least_16_characters',
-  ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || 'f6a8e32c813bbd74d39fae6189ef9490351f08cb38b939dc6158f447604ad473',
-  PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL || 'http://localhost:5000',
-  CLIENT_ORIGIN: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  MONGODB_URI: process.env.MONGODB_URI,
+  JWT_SECRET: process.env.JWT_SECRET,
+  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
+  ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
+  PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL,
+  CLIENT_ORIGIN: process.env.CLIENT_ORIGIN,
 };
